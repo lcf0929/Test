@@ -7,11 +7,11 @@ sequenceDiagram
     participant CPU as CPU (Cortex-M33)
     participant MUX as AXI MUX (Switch)
     participant eMMC as eMMC Storage
-    participant DWB as DWB Memory
+    participant DRAM as DRAM Memory
     participant ET3 as ET3 (LPU)
 
-    note over CPU, DWB: Step 1: Weight Loading (One-Time)
-    CPU->>MUX: Switch Path: eMMC ↔ DWB
+    note over CPU, DRAM: Step 1: Weight Loading (One-Time)
+    CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer
     eMMC->>DWB: Write LLM Weights 
     
@@ -25,7 +25,7 @@ sequenceDiagram
     loop auto regressive (Until end symbol)
         note right of CPU: Step 4: Dispatch & Compute
         CPU->>ET3: Send "Next Token" command (via HIF)
-        CPU->>MUX: Switch Path: ET3 ↔ DWB
+        CPU->>MUX: Switch Path: ET3 ??DRAM
         
         loop layer
             ET3->>DWB: Read W/KV/Image
@@ -37,7 +37,7 @@ sequenceDiagram
         ET3-->>CPU: Interrupt (Idle or Error)
         
         note right of CPU: Step 6: Read Result
-        CPU->>MUX: Switch Path: CPU ↔ DWB
+        CPU->>MUX: Switch Path: CPU ??DRAM
         CPU->>DWB: Read Logits (transfer to SYSRAM)
         
         alt Token Position > Prompt Size (Generation)
@@ -60,11 +60,11 @@ sequenceDiagram
     participant CPU as CPU (Cortex-M33)
     participant MUX as AXI MUX (Switch)
     participant eMMC as eMMC Storage
-    participant DWB as DWB Memory
+    participant DRAM as DRAM Memory
     participant ET3 as ET3 (LPU)
 
-    note over CPU, DWB: Step 1: Weight Loading (One-Time)
-    CPU->>MUX: Switch Path: eMMC ↔ DWB
+    note over CPU, DRAM: Step 1: Weight Loading (One-Time)
+    CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer (VLM Weights)
     eMMC->>DWB: Write VLM Weights
     
@@ -73,8 +73,8 @@ sequenceDiagram
     CPU->>CPU: Tokenize Prompt & LUT
     CPU->>ET3: Send Full Prompt Tokens (via HIF)
     
-    note over USB, DWB: Step 3: Image Loading (RGB24)
-    CPU->>MUX: Switch Path: USB ↔ DWB
+    note over USB, DRAM: Step 3: Image Loading (RGB24)
+    CPU->>MUX: Switch Path: USB ??DRAM
     USB->>DWB: Write RGB24 Image Data (DMA)
     
     note over CPU, ET3: Step 4: VLM Trigger
@@ -84,7 +84,7 @@ sequenceDiagram
     
     loop auto regressive (Until End Symbol)
         note right of CPU: Step 5: Compute
-        CPU->>MUX: Switch Path: ET3 ↔ DWB
+        CPU->>MUX: Switch Path: ET3 ??DRAM
         
         loop layer
             ET3->>DWB: Read W/KV/Image
@@ -97,7 +97,7 @@ sequenceDiagram
         ET3-->>CPU: Interrupt (Idle/Error)
         
         note right of CPU: Step 7: Read, Sample, Feedback
-        CPU->>MUX: Switch Path: CPU ↔ DWB
+        CPU->>MUX: Switch Path: CPU ??DRAM
         CPU->>DWB: Read Logits (transfer to SYSRAM)
         CPU->>CPU: Sample "Next Token"
         CPU->>ET3: Send "Next Token" (via HIF)
@@ -113,13 +113,13 @@ sequenceDiagram
     participant CPU as CPU (Cortex-M33)
     participant MUX as AXI MUX (Switch)
     participant eMMC as eMMC Storage
-    participant DWB_L as DWB (L / Model 1)
-    participant DWB_R as DWB (R / Model 2)
+    participant DRAM_L as DRAM (L / Model 1)
+    participant DRAM_R as DRAM (R / Model 2)
     participant ET3_L as ET3 (L / Model 1)
     participant ET3_R as ET3 (R / Model 2)
 
-    note over CPU, DWB_R: Step 1: Weight Loading (One-Time)
-    CPU->>MUX: Switch Path: eMMC ↔ DWB
+    note over CPU, DRAM_R: Step 1: Weight Loading (One-Time)
+    CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer (Model 1 & 2)
     par Load Model 1
         eMMC->>DWB_L: Write Model 1 Weights
@@ -151,7 +151,7 @@ sequenceDiagram
 
     loop auto regressive (Until End Symbol)
         note right of CPU: Step 5: Compute (Task i)
-        CPU->>MUX: Switch Path: ET3 ↔ DWB
+        CPU->>MUX: Switch Path: ET3 ??DRAM
         
         alt i = Model 1 (Left)
             CPU->>ET3_L: Send "Next Token" (HIF)
@@ -179,7 +179,7 @@ sequenceDiagram
         end
 
         note right of CPU: Step 7: Read & Sample
-        CPU->>MUX: Switch Path: CPU ↔ DWB
+        CPU->>MUX: Switch Path: CPU ??DRAM
         
         alt i = Model 1 (Left)
             CPU->>DWB_L: Read Logits
@@ -205,13 +205,13 @@ sequenceDiagram
     participant CPU as CPU (Cortex-M33)
     participant MUX as AXI MUX (Switch)
     participant eMMC as eMMC Storage
-    participant DWB_L as DWB (L / Model 1)
-    participant DWB_R as DWB (R / Model 2)
+    participant DRAM_L as DRAM (L / Model 1)
+    participant DRAM_R as DRAM (R / Model 2)
     participant ET3_L as ET3 (L / Model 1)
     participant ET3_R as ET3 (R / Model 2)
 
-    note over CPU, DWB_R: Step 1: Weight Loading (VLM Data)
-    CPU->>MUX: Switch Path: eMMC ↔ DWB
+    note over CPU, DRAM_R: Step 1: Weight Loading (VLM Data)
+    CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer
     par Load Model 1
         eMMC->>DWB_L: Write VLM Weights (Model 1)
@@ -230,8 +230,8 @@ sequenceDiagram
         CPU->>ET3_R: Send Full Tokens (HIF)
     end
 
-    note over USB, DWB_R: Step 3: Image Loading (RGB24)
-    CPU->>MUX: Switch Path: USB ↔ DWB
+    note over USB, DRAM_R: Step 3: Image Loading (RGB24)
+    CPU->>MUX: Switch Path: USB ??DRAM
     
     alt i = Model 1 (Left)
         USB->>DWB_L: Write RGB24 Image (DMA)
@@ -252,7 +252,7 @@ sequenceDiagram
 
     loop auto regressive (Until End Symbol)
         note right of CPU: Step 5: Compute
-        CPU->>MUX: Switch Path: ET3 ↔ DWB
+        CPU->>MUX: Switch Path: ET3 ??DRAM
         
         alt i = Model 1 (Left)
             loop layer 
@@ -278,7 +278,7 @@ sequenceDiagram
         end
 
         note right of CPU: Step 7: Read, Sample, Feedback
-        CPU->>MUX: Switch Path: CPU ↔ DWB
+        CPU->>MUX: Switch Path: CPU ??DRAM
         
         alt i = Model 1 (Left)
             CPU->>DWB_L: Read Logits
