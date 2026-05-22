@@ -13,7 +13,7 @@ sequenceDiagram
     note over CPU, DRAM: Step 1: Weight Loading (One-Time)
     CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer
-    eMMC->>DWB: Write LLM Weights 
+    eMMC->>DRAM: Write LLM Weights 
     
     note over USB, CPU: Step 2: Prompt Handling
     USB->>CPU: Send User Prompt (to SYSRAM)
@@ -28,17 +28,17 @@ sequenceDiagram
         CPU->>MUX: Switch Path: ET3 ??DRAM
         
         loop layer
-            ET3->>DWB: Read W/KV/Image
+            ET3->>DRAM: Read W/KV/Image
             ET3->>ET3: Compute
-            ET3->>DWB: Write KV
+            ET3->>DRAM: Write KV
         end
-        ET3->>DWB: Write Logit to specific address
+        ET3->>DRAM: Write Logit to specific address
         note right of CPU: Step 5: Completion Signal
         ET3-->>CPU: Interrupt (Idle or Error)
         
         note right of CPU: Step 6: Read Result
         CPU->>MUX: Switch Path: CPU ??DRAM
-        CPU->>DWB: Read Logits (transfer to SYSRAM)
+        CPU->>DRAM: Read Logits (transfer to SYSRAM)
         
         alt Token Position > Prompt Size (Generation)
             CPU->>CPU: Sample Next Token (e.g., Top-K)
@@ -66,7 +66,7 @@ sequenceDiagram
     note over CPU, DRAM: Step 1: Weight Loading (One-Time)
     CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer (VLM Weights)
-    eMMC->>DWB: Write VLM Weights
+    eMMC->>DRAM: Write VLM Weights
     
     note over USB, CPU: Step 2: Text Prompt Initialization
     USB->>CPU: Send User Prompt (to SYSRAM)
@@ -75,7 +75,7 @@ sequenceDiagram
     
     note over USB, DRAM: Step 3: Image Loading (RGB24)
     CPU->>MUX: Switch Path: USB ??DRAM
-    USB->>DWB: Write RGB24 Image Data (DMA)
+    USB->>DRAM: Write RGB24 Image Data (DMA)
     
     note over CPU, ET3: Step 4: VLM Trigger
     USB-->>CPU: Interrupt (DMA Ready)
@@ -87,18 +87,18 @@ sequenceDiagram
         CPU->>MUX: Switch Path: ET3 ??DRAM
         
         loop layer
-            ET3->>DWB: Read W/KV/Image
+            ET3->>DRAM: Read W/KV/Image
             ET3->>ET3: Compute
-            ET3->>DWB: Write KV
+            ET3->>DRAM: Write KV
         end
        
         note right of CPU: Step 6: Result Ready
-        ET3->>DWB: Write Logits to specific address
+        ET3->>DRAM: Write Logits to specific address
         ET3-->>CPU: Interrupt (Idle/Error)
         
         note right of CPU: Step 7: Read, Sample, Feedback
         CPU->>MUX: Switch Path: CPU ??DRAM
-        CPU->>DWB: Read Logits (transfer to SYSRAM)
+        CPU->>DRAM: Read Logits (transfer to SYSRAM)
         CPU->>CPU: Sample "Next Token"
         CPU->>ET3: Send "Next Token" (via HIF)
         CPU->>CPU: Detokenization/decode to Text
@@ -122,9 +122,9 @@ sequenceDiagram
     CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer (Model 1 & 2)
     par Load Model 1
-        eMMC->>DWB_L: Write Model 1 Weights
+        eMMC->>DRAM_L: Write Model 1 Weights
     and Load Model 2
-        eMMC->>DWB_R: Write Model 2 Weights
+        eMMC->>DRAM_R: Write Model 2 Weights
     end
 
     note over CPU: Step 2: Task Creation (Independent Instances)
@@ -156,25 +156,25 @@ sequenceDiagram
         alt i = Model 1 (Left)
             CPU->>ET3_L: Send "Next Token" (HIF)
             loop layer
-                ET3_L->>DWB_L: Read W/KV
+                ET3_L->>DRAM_L: Read W/KV
                 ET3_L->>ET3_L: Compute
-                ET3_L->>DWB_L: Write KV
+                ET3_L->>DRAM_L: Write KV
             end
         else i = Model 2 (Right)
             CPU->>ET3_R: Send "Next Token" (HIF)
             loop layer
-                ET3_R->>DWB_R: Read W/KV
+                ET3_R->>DRAM_R: Read W/KV
                 ET3_R->>ET3_R: Compute
-                ET3_R->>DWB_R: Write KV
+                ET3_R->>DRAM_R: Write KV
             end
         end
 
         note right of CPU: Step 6: Result Ready
         alt i = Model 1 (Left)
-            ET3_L->>DWB_L: Write Logit to specific address
+            ET3_L->>DRAM_L: Write Logit to specific address
             ET3_L-->>CPU: Interrupt (Idle/Error)
         else i = Model 2 (Right)
-            ET3_R->>DWB_R: Write Logit to specific address
+            ET3_R->>DRAM_R: Write Logit to specific address
             ET3_R-->>CPU: Interrupt (Idle/Error)
         end
 
@@ -182,9 +182,9 @@ sequenceDiagram
         CPU->>MUX: Switch Path: CPU ??DRAM
         
         alt i = Model 1 (Left)
-            CPU->>DWB_L: Read Logits
+            CPU->>DRAM_L: Read Logits
         else i = Model 2 (Right)
-            CPU->>DWB_R: Read Logits
+            CPU->>DRAM_R: Read Logits
         end
 
         alt Token Pos > Prompt Size (Generation)
@@ -214,9 +214,9 @@ sequenceDiagram
     CPU->>MUX: Switch Path: eMMC ??DRAM
     CPU->>eMMC: Trigger DMA Transfer
     par Load Model 1
-        eMMC->>DWB_L: Write VLM Weights (Model 1)
+        eMMC->>DRAM_L: Write VLM Weights (Model 1)
     and Load Model 2
-        eMMC->>DWB_R: Write VLM Weights (Model 2)
+        eMMC->>DRAM_R: Write VLM Weights (Model 2)
     end
 
     note over USB, CPU: Step 2: Text Prompt Initialization
@@ -234,9 +234,9 @@ sequenceDiagram
     CPU->>MUX: Switch Path: USB ??DRAM
     
     alt i = Model 1 (Left)
-        USB->>DWB_L: Write RGB24 Image (DMA)
+        USB->>DRAM_L: Write RGB24 Image (DMA)
     else i = Model 2 (Right)
-        USB->>DWB_R: Write RGB24 Image (DMA)
+        USB->>DRAM_R: Write RGB24 Image (DMA)
     end
 
     note over USB, CPU: Step 4: Trigger VLM Process
@@ -256,24 +256,24 @@ sequenceDiagram
         
         alt i = Model 1 (Left)
             loop layer 
-                ET3_L->>DWB_L: Read W/KV/Image
+                ET3_L->>DRAM_L: Read W/KV/Image
                 ET3_L->>ET3_L: Compute
-                ET3_L->>DWB_L: Write KV
+                ET3_L->>DRAM_L: Write KV
             end
         else i = Model 2 (Right)
             loop layer
-                ET3_R->>DWB_R: Read W/KV/Image
+                ET3_R->>DRAM_R: Read W/KV/Image
                 ET3_R->>ET3_R: Compute
-                ET3_R->>DWB_R: Write KV
+                ET3_R->>DRAM_R: Write KV
             end
         end
 
         note right of CPU: Step 6: Result Ready
         alt i = Model 1 (Left)
-            ET3_L->>DWB_L: Write Logit to specific address
+            ET3_L->>DRAM_L: Write Logit to specific address
             ET3_L-->>CPU: Interrupt (Idle/Error)
         else i = Model 2 (Right)
-            ET3_R->>DWB_R: Write Logit to specific address
+            ET3_R->>DRAM_R: Write Logit to specific address
             ET3_R-->>CPU: Interrupt (Idle/Error)
         end
 
@@ -281,9 +281,9 @@ sequenceDiagram
         CPU->>MUX: Switch Path: CPU ??DRAM
         
         alt i = Model 1 (Left)
-            CPU->>DWB_L: Read Logits
+            CPU->>DRAM_L: Read Logits
         else i = Model 2 (Right)
-            CPU->>DWB_R: Read Logits
+            CPU->>DRAM_R: Read Logits
         end
 
         CPU->>CPU: Sample "Next Token"
